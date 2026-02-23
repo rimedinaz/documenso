@@ -10,6 +10,18 @@ This repository provides a standalone Docker Compose stack for running Documenso
 
 ## Quick Start
 
+## Bootstrap admin user (optional)
+
+Create/update an admin user for test environments:
+
+```bash
+BOOTSTRAP_ADMIN_EMAIL="rimedinaz@gmail.com" \
+BOOTSTRAP_ADMIN_PASSWORD="Secret123!" \
+BOOTSTRAP_ADMIN_NAME="Richard Medina" \
+docker cp ./scripts/bootstrap-admin.js documenso-documenso-1:/app/bootstrap-admin.js && \
+docker-compose exec -T documenso node /app/bootstrap-admin.js
+```
+
 1.  **Initialize the Environment**
 
     Run the initialization script to generate environment variables, encryption keys, and a self-signed certificate.
