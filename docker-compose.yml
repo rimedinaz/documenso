@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-documenso}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-documenso}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-documenso} -d ${POSTGRES_DB:-documenso}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  documenso:
+    image: documenso/documenso:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # App Config
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXT_PUBLIC_WEBAPP_URL}
+      NEXT_PUBLIC_WEBAPP_URL: ${NEXT_PUBLIC_WEBAPP_URL}
+      
+      # Database
+      NEXT_PRIVATE_DATABASE_URL: postgresql://${POSTGRES_USER:-documenso}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-documenso}
+      NEXT_PRIVATE_DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-documenso}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-documenso}
+
+      # Encryption
+      NEXT_PRIVATE_ENCRYPTION_KEY: ${NEXT_PRIVATE_ENCRYPTION_KEY}
+      NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY: ${NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY}
+
+      # Mail
+      NEXT_PRIVATE_SMTP_TRANSPORT: ${NEXT_PRIVATE_SMTP_TRANSPORT:-smtp-auth}
+      NEXT_PRIVATE_SMTP_HOST: ${NEXT_PRIVATE_SMTP_HOST:-mailpit}
+      NEXT_PRIVATE_SMTP_PORT: ${NEXT_PRIVATE_SMTP_PORT:-1025}
+      NEXT_PRIVATE_SMTP_USERNAME: ${NEXT_PRIVATE_SMTP_USERNAME}
+      NEXT_PRIVATE_SMTP_PASSWORD: ${NEXT_PRIVATE_SMTP_PASSWORD}
+      NEXT_PRIVATE_SMTP_SECURE: ${NEXT_PRIVATE_SMTP_SECURE:-false}
+      NEXT_PRIVATE_SMTP_FROM_NAME: ${NEXT_PRIVATE_SMTP_FROM_NAME:-Documenso}
+      NEXT_PRIVATE_SMTP_FROM_ADDRESS: ${NEXT_PRIVATE_SMTP_FROM_ADDRESS:-noreply@documenso.local}
+
+      # Signing
+      NEXT_PRIVATE_SIGNING_TRANSPORT: ${NEXT_PRIVATE_SIGNING_TRANSPORT:-local}
+      NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: /app/certs/cert.p12
+      NEXT_PRIVATE_SIGNING_PASSPHRASE: ${NEXT_PRIVATE_SIGNING_PASSPHRASE:-password}
+
+      # Storage
+      NEXT_PUBLIC_UPLOAD_TRANSPORT: ${NEXT_PUBLIC_UPLOAD_TRANSPORT:-database}
+      # If S3 is used, configure below:
+      # NEXT_PRIVATE_UPLOAD_ENDPOINT: ${NEXT_PRIVATE_UPLOAD_ENDPOINT}
+      # NEXT_PRIVATE_UPLOAD_REGION: ${NEXT_PRIVATE_UPLOAD_REGION}
+      # NEXT_PRIVATE_UPLOAD_BUCKET: ${NEXT_PRIVATE_UPLOAD_BUCKET}
+      # NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID: ${NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID}
+      # NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY: ${NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    volumes:
+      - ./certs:/app/certs:ro
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  postgres_data:
